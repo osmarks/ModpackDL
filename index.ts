@@ -1,89 +1,79 @@
-/* This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details. */
+const fs = require("fs")
+const rmrf = require("rimraf").sync
+const request = require("request")
+const path = require("path")
+const progress = require("cli-progress")
+const requestProgress = require("request-progress")
+const prefix = require("prefix-si").prefix
 
-// Various declarations
-var fs = require('fs');
-var modlist:Array<Mod> = [];
-var wait = require('wait.for-es6');
-var finalModlist:Array<Mod> = [];
-var modDir = "./mods";
-var rmrf = require('rimraf').sync;
-var request = require('request');
+const generateFilename = ({name, version}) => `${name} [${version}].jar`
 
-class Mod {
-  name:string;
-  version:string;
-  url:string;
-  directory:string;
-  constructor(name:string, version:string, url:string, directory:string){
-    this.name = name;
-    this.version = version;
-    this.url = url;
-    this.directory = directory;
-  }
-  getFilename():string{
-    return this.name + " [" + this.version + "].jar";
-  }
-  getPath():string{
-    return this.directory + "/" + this.getFilename();
-  }
-  async download(){
-    if (this.url == "IGNORE") {
-      console.log(this.getFilename() + " must be supplied by the user");
-      return;
-    }
-    console.log(this.getFilename() + " will be downloaded");
-    var file = fs.createWriteStream(this.getPath());
-    request(this.url).pipe(file);
-    await new Promise(fulfill => file.on("finish", fulfill));
-    console.log(this.getFilename() + " has been downloaded!");
-    return 0;
+const download = (url, filename) => {
+  if (url === null || url === "IGNORE") {
+    console.log(`Not downloading ${filename}.`)
+    return;
   }
 }
 
+const formatBytes = b => prefix(b, "B")
 
-export async function executeDL(modlistJSONObject:any, modFolder:string){
-  if (!fs.existsSync(modFolder)){
-    fs.mkdirSync(modFolder);
-  }
+export const executeDL = async (modData, root) => {
+  const mods = modData.mods;
+  // Keep files matching a mod we want
+  const keep = mods.map(generateFilename)
 
-  var dirread:Array<string> = fs.readdirSync(modFolder);
-  for (let mod in modlistJSONObject.mods){
-    modlist.push(new Mod(modlistJSONObject.mods[mod].name, modlistJSONObject.mods[mod].version, modlistJSONObject.mods[mod].url, modFolder));
-  }
-
-
-  // Deciding what to download
-  for (let mod in modlist){
-    if (!(dirread.includes(modlist[mod].getFilename()))){
-      finalModlist.push(modlist[mod]);
-    }else{
-      console.log(modlist[mod].getFilename() + " has already been downloaded. No need to download again.")
+  const alreadyDownloaded = []
+  const contents = fs.readdirSync(root)
+  for (const file of contents) {
+    // If modlist contains this file, then keep it & add it to already downloaded list
+    if (keep.includes(file)) {
+      console.log(`File ${file} already downloaded.`)
+      alreadyDownloaded.push(file)
+    } else {
+      // Delete it otherwise
+      console.log(`File ${file} not recognized; deleting.`)
+      rmrf(path.join(root, file))
     }
   }
 
-  // Deleting all existing files
-  for (let file in dirread){
-    var isContained = false;
-    for (let mod in modlist){
-      if (dirread[file] == modlist[mod].getFilename()) isContained = true;
-    }
-    if (!isContained){
-      rmrf(modDir + "/" + dirread[file]);
-      console.log(dirread[file] + " was removed and thus the file is now deleted.")
+  for (const mod of mods) {
+    const filename = generateFilename(mod)
+    // If mod not already downloaded, download it
+    if (!alreadyDownloaded.includes(filename)) {
+      const finalPath = path.join(root, filename)
+      const tempPath = finalPath + ".temp" // download to temp file
+      const file = fs.createWriteStream(tempPath)
+
+      // Generate progress bar
+      const bar = new progress.Bar({
+        format: `${mod.name} {bar} | {percentage}% | {eta}s | {pos}/{size} | {speed}/s`,
+        etaBuffer: 20
+      }, progress.Presets.shades_classic)
+
+      requestProgress(request(mod.url))
+        .on("response", response => {
+          const len = parseInt(response.headers['content-length'], 10)
+          bar.start(len, 0, {
+            speed: "N/A",
+            size: formatBytes(len),
+            pos: formatBytes(0)
+          })
+        })
+        .on("progress", prog => {
+          // Update bar with new values
+          bar.update(prog.size.transferred, {
+            speed: formatBytes(prog.speed),
+            pos: formatBytes(prog.size.transferred)
+          })
+        })
+        .pipe(file)
+
+      // Wait until download complete
+      await new Promise(resolve => file.on("finish", resolve))
+      bar.stop()
+      fs.renameSync(tempPath, finalPath)
     }
   }
 
-  // Downloading missing mods
-  for (let mod in finalModlist){
-    await finalModlist[mod].download();
-  }
-
-  console.log("Remember to use forge " + modlistJSONObject.forgeVersion);
+  console.log(`Mod download complete. The modpack recommends Forge version ${modData.forge}`)
 }
