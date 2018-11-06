@@ -46,7 +46,7 @@ export const executeDL = async (modData, root) => {
 
       // Generate progress bar
       const bar = new progress.Bar({
-        format: `${mod.name} {bar} | {percentage}% | {eta}s | {pos}/{size} | {speed}/s`,
+        format: `{bar} | ${mod.name} | {percentage}% | {eta}s | {pos}/{size} | {speed}/s`,
         etaBuffer: 20
       }, progress.Presets.shades_classic)
 
@@ -75,5 +75,5 @@ export const executeDL = async (modData, root) => {
     }
   }
 
-  console.log(`Mod download complete. The modpack recommends Forge version ${modData.forge}`)
+  console.log(`Mod download complete. The modpack recommends Forge version ${modData.forge}.`)
 }

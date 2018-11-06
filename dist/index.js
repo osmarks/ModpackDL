@@ -88,7 +88,7 @@ exports.executeDL = function (modData, root) { return __awaiter(_this, void 0, v
                                 ;
                                 file_1 = fs.createWriteStream(tempPath);
                                 bar_1 = new progress.Bar({
-                                    format: mod.name + " {bar} | {percentage}% | {eta}s | {pos}/{size} | {speed}/s",
+                                    format: "{bar} | " + mod.name + " | {percentage}% | {eta}s | {pos}/{size} | {speed}/s",
                                     etaBuffer: 20
                                 }, progress.Presets.shades_classic);
                                 requestProgress(request(mod.url))
@@ -133,7 +133,7 @@ exports.executeDL = function (modData, root) { return __awaiter(_this, void 0, v
                 _a++;
                 return [3 /*break*/, 1];
             case 4:
-                console.log("Mod download complete. The modpack recommends Forge version " + modData.forge);
+                console.log("Mod download complete. The modpack recommends Forge version " + modData.forge + ".");
                 return [2 /*return*/];
         }
     });
