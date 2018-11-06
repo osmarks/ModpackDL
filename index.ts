@@ -75,5 +75,5 @@ export const executeDL = async (modData, root) => {
     }
   }
 
-  console.log(`Mod download complete. The modpack recommends Forge version ${modData.forge}.`)
+  console.log(`Mod download complete. The modpack recommends Forge version ${modData.forge || modData.forgeVersion}.`)
 }
