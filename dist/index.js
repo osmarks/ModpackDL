@@ -58,7 +58,7 @@ var formatBytes = function (b) { return prefix(b, "B"); };
 var rename = promisify(fs.rename);
 var readdir = promisify(fs.readdir);
 exports.executeDL = function (modData, root) { return __awaiter(_this, void 0, void 0, function () {
-    var mods, keep, alreadyDownloaded, contents, _i, contents_1, file, _loop_1, _a, mods_1, mod;
+    var mods, keep, alreadyDownloaded, contents, _i, contents_1, file, _loop_1, _a, mods_1, mod, forge;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
@@ -151,7 +151,11 @@ exports.executeDL = function (modData, root) { return __awaiter(_this, void 0, v
                 _a++;
                 return [3 /*break*/, 7];
             case 10:
-                console.log("Mod download complete. The modpack recommends Forge version " + (modData.forge || modData.forgeVersion) + ".");
+                console.log("Mod download complete.");
+                forge = modData.forgeVersion || modData.forge;
+                if (forge) {
+                    console.log("The modpack recommends Forge version " + forge + ".");
+                }
                 return [2 /*return*/];
         }
     });
