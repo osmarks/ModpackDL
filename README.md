@@ -1,9 +1,9 @@
 # ModpackDL
 A simple minecraft modpack downloader.
 
-## Modlist JSON Object
-The Modlist JSON object should be a keyed json object with this structure:
-~~~~
+## Modpack
+The Modpack object should be an object with this structure:
+~~~~json
 {
 	forgeVersion: "16.45.23282"
 	mods: [
@@ -13,30 +13,29 @@ The Modlist JSON object should be a keyed json object with this structure:
 			url: "http://example.org"
 		},
 		{
-			name: "ModName"
+			name: "OtherModName"
 			version: "1.12.2"
 			url: "http://example.org"
 		}
 	]
 }
 ~~~~
-
-I suggest using an actual json file or hjson file, instead of writing an object by hand, but you can theorically dynamically generate a modlist.
+`forge` is available as an alias for `forgeVersion` and both are optional.
 
 ## Usage
-~~~~
-var dl = require('modpackdl');
-dl.executeDL(modpackJsonObject, modsFolder)
+~~~~javascript
+var dl = require('modpackdl')
+dl.executeDL(modpackObject, path)
 ~~~~
 
 or
 
-~~~~
+~~~~javascript
 var dl = require('modpackdl');
-dl.executeDL(modpackJsonObject, modsFolder).then( function(){
-	//Your stuff
-}.catch(function(){
-	//Error handling
+dl.executeDL(modpackObject, path).then(() => {
+	// Your stuff
+}).catch(() => {
+	// Error handling
 })
 ~~~~
 
