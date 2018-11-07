@@ -1,21 +1,25 @@
 const fs = require("fs")
-const rmrf = require("rimraf").sync
+const rmrf = require("rimraf")
 const request = require("request")
 const path = require("path")
 const progress = require("cli-progress")
 const requestProgress = require("request-progress")
 const prefix = require("prefix-si").prefix
+const promisify = require("es6-promisify").promisify
 
 const generateFilename = ({name, version}) => `${name} [${version}].jar`
 
 const download = (url, filename) => {
   if (url === null || url === "IGNORE") {
     console.log(`Not downloading ${filename}.`)
-    return;
+    return
   }
 }
 
 const formatBytes = b => prefix(b, "B")
+
+const rename = promisify(fs.rename)
+const readdir = promisify(fs.readdir)
 
 export const executeDL = async (modData, root) => {
   const mods = modData.mods;
@@ -23,7 +27,7 @@ export const executeDL = async (modData, root) => {
   const keep = mods.map(generateFilename)
 
   const alreadyDownloaded = []
-  const contents = fs.readdirSync(root)
+  const contents = await readdir(root)
   for (const file of contents) {
     // If modlist contains this file, then keep it & add it to already downloaded list
     if (keep.includes(file)) {
@@ -32,7 +36,7 @@ export const executeDL = async (modData, root) => {
     } else {
       // Delete it otherwise
       console.log(`File ${file} not recognized; deleting.`)
-      rmrf(path.join(root, file))
+      await promisify(rmrf)(path.join(root, file))
     }
   }
 
@@ -50,9 +54,11 @@ export const executeDL = async (modData, root) => {
         etaBuffer: 20
       }, progress.Presets.shades_classic)
 
+      let len // we need to use this value in multiple handlers
+
       requestProgress(request(mod.url))
         .on("response", response => {
-          const len = parseInt(response.headers['content-length'], 10)
+          len = parseInt(response.headers['content-length'], 10)
           bar.start(len, 0, {
             speed: "N/A",
             size: formatBytes(len),
@@ -70,8 +76,12 @@ export const executeDL = async (modData, root) => {
 
       // Wait until download complete
       await new Promise(resolve => file.on("finish", resolve))
+      bar.update(len, {
+        pos: formatBytes(len)
+      }) // set bar to end
       bar.stop()
-      fs.renameSync(tempPath, finalPath)
+
+      await rename(tempPath, finalPath)
     }
   }
 
